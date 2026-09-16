@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>七宗罪分布图趣味测试</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft Yahei",sans-serif;}
+body{background:#121218;color:#fff;padding:20px;max-width:720px;margin:0 auto;}
+h1{text-align:center;margin:24px 0;font-size:22px;color:#ddb87c;}
+.page-start{display:block;}
+.page-quiz,.page-result{display:none;}
+.question{background:#1e1e29;padding:18px;border-radius:12px;margin:16px 0;}
+.q-title{font-size:17px;margin-bottom:14px;line-height:1.6;}
+.opt{padding:12px 14px;border:1px solid #444;border-radius:9px;margin:10px 0;cursor:pointer;transition:0.25s;}
+.opt:hover{background:#352b38;border-color:#996065;}
+.opt.active{background:#602c34;border-color:#c97078;}
+.btn{width:100%;padding:14px;border-radius:10px;border:none;background:#943643;color:#fff;font-size:17px;margin-top:20px;cursor:pointer;}
+#radar{width:100%;height:440px;margin:20px 0;}
+.desc-text{background:#242430;padding:16px;border-radius:12px;line-height:1.7;margin-top:12px;}
+.start-btn{padding:16px;width:80%;margin:40px auto;display:block;font-size:19px;border-radius:12px;border:0;background:#943643;color:white;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="page-start" id="startPage">
+<h1>✨七宗罪分布图趣味测试✨</h1>
+<div style="padding:16px;background:#1e1e29;border-radius:12px;margin-top:20px;">
+<p style="line-height:1.8;">本测试仅供休闲娱乐。一共14道选择题。根据你的真实想法选择答案，结束后生成你的个人七宗罪雷达分布图。</p>
+</div>
+<button class="start-btn" onclick="goQuiz()">开始测试</button>
+</div>
+
+<div class="page-quiz" id="quizPage">
+<div class="question">
+<div class="q-title" id="qText"></div>
+<div id="optWrap"></div>
+</div>
+<button class="btn" id="nextBtn" onclick="nextQuestion()">下一题</button>
+</div>
+
+<div class="page-result" id="resPage">
+<h1>你的七宗罪分布图</h1>
+<div id="radar"></div>
+<div class="desc-text" id="resultDesc"></div>
+<button class="btn" style="margin-top:24px;" onclick="restartTest()">重新测试</button>
+</div>
+
+<script>
+//七个维度顺序：傲慢，贪婪，色欲，嫉妒，暴怒，暴食，懒惰
+const dimNames = ["傲慢","贪婪","色欲","嫉妒","暴怒","暴食","懒惰"];
+let score=[0,0,0,0,0,0,0];
+let currentQ=0;
+
+//题库一共14题
+const quizList=[
+{
+q:"别人当众夸奖你的时候，你的内心更接近？",
+opts:[
+{txt:"内心洋洋得意，很享受被崇拜的感觉",val:[3,0,0,0,0,0,0]},
+{txt:"礼貌接受，但不会过度沾沾自喜",val:[1,0,0,0,0,0,0]},
+{txt:"有点不好意思，希望话题尽快转移开",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"看到身边朋友赚到一大笔钱，你第一想法？",
+opts:[
+{txt:"我也好想要这么多财富，十分羡慕渴望",val:[0,3,0,0,0,0,0]},
+{txt:"替对方开心，同时自己也想努力赚钱",val:[0,1,0,0,0,0,0]},
+{txt:"每个人际遇不一样，平常心看待就好",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"面对心动的异性，你的倾向？",
+opts:[
+{txt:"很容易沉溺好感，渴望亲密关系",val:[0,0,3,0,0,0,0]},
+{txt:"会动心，但会克制自己保持分寸",val:[0,0,1,0,0,0,0]},
+{txt:"情绪比较冷淡，不容易陷入迷恋",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"当熟人取得耀眼的成绩远超你时？",
+opts:[
+{txt:"心里隐隐不服，暗自对比甚至有点发酸",val:[0,0,0,3,0,0,0]},
+{txt:"有一点点羡慕，但还是祝福对方",val:[0,0,0,1,0,0,0]},
+{txt:"由衷祝贺，不会拿自己和对方比较",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"遇到别人故意惹你生气的时候，你通常？",
+opts:[
+{txt:"瞬间火冒三丈，很容易直接发火反击",val:[0,0,0,0,3,0,0]},
+{txt:"心里很生气，但尽量忍耐，事后平复",val:[0,0,0,0,1,0,0]},
+{txt:"尽量冷静，不去跟对方争执纠缠",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"面对美食大餐的时候你的状态？",
+opts:[
+{txt:"很难管住嘴，明明饱了依旧还想吃更多",val:[0,0,0,0,0,3,0]},
+{txt:"享受好吃的，但懂得适可而止控制食量",val:[0,0,0,0,0,1,0]},
+{txt:"吃东西只求饱腹，对美食没有执念",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"周末有空的时候，你更愿意？",
+opts:[
+{txt:"只想躺着睡觉刷手机，什么事都不想做",val:[0,0,0,0,0,0,3]},
+{txt:"先休息，之后还是会做点自己的事情",val:[0,0,0,0,0,0,1]},
+{txt:"主动安排，看书运动充实自己的时间",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"当团队做出成绩时，你内心希望功劳？",
+opts:[
+{txt:"希望大家看见自己，凸显自己的地位",val:[3,0,0,0,0,0,0]},
+{txt:"希望得到认可，但不会刻意抢风头",val:[1,0,0,0,0,0,0]},
+{txt:"集体成果，不必单独突出个人",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"如果有机会获得额外的利益，你的想法？",
+opts:[
+{txt:"能多拿就尽量多争取一些好处",val:[0,3,0,0,0,0,0]},
+{txt:"合理范围内争取属于自己的收益",val:[0,1,0,0,0,0,0]},
+{txt:"安分守己，不属于自己的不去谋求",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"对于感情，你是否容易产生执念？",
+opts:[
+{txt:"容易贪恋情感，放不下眷恋",val:[0,0,3,0,0,0,0]},
+{txt:"会重视感情，但可以理性放下",val:[0,0,1,0,0,0,0]},
+{txt:"对待感情比较淡然通透",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"别人拥有你梦寐以求的东西，你会？",
+opts:[
+{txt:"内心会滋生嫉妒，暗自不甘心",val:[0,0,0,3,0,0,0]},
+{txt:"有点羡慕，以此激励自己努力",val:[0,0,0,1,0,0,0]},
+{txt:"接受现实，祝福对方拥有",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"事情不顺心意的时候你的情绪反应？",
+opts:[
+{txt:"极易烦躁发怒，控制不住火气",val:[0,0,0,0,3,0,0]},
+{txt:"心里烦闷，尽量克制住情绪",val:[0,0,0,0,1,0,0]},
+{txt:"试着放平心态接受不如意",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"零食夜宵对你诱惑力如何？",
+opts:[
+{txt:"很难抵抗诱惑，总想吃吃喝喝",val:[0,0,0,0,0,3,0]},
+{txt:"偶尔想吃，大多数时候可以管住",val:[0,0,0,0,0,1,0]},
+{txt:"吃喝欲望不强，无所谓宵夜零食",val:[0,0,0,0,0,0,0]}
+]
+},
+{
+q:"有计划待办任务，你经常？",
+opts:[
+{txt:"习惯性拖延，一直搁着不愿动手",val:[0,0,0,0,0,0,3]},
+{txt:"偶尔拖延，但最后还是完成任务",val:[0,0,0,0,0,0,1]},
+{txt:"尽量按时推进完成计划事项",val:[0,0,0,0,0,0,0]}
+]
+}
+];
+
+let selectedIndex=null;
+
+function goQuiz(){
+document.getElementById("startPage").style.display="none";
+document.getElementById("quizPage").style.display="block";
+document.getElementById("resPage").style.display="none";
+currentQ=0;
+score=[0,0,0,0,0,0,0];
+renderQuestion();
+}
+
+function renderQuestion(){
+selectedIndex=null;
+const q=quizList[currentQ];
+document.getElementById("qText").innerText=(currentQ+1)+". "+q.q;
+let html="";
+for(let i=0;i<q.opts.length;i++){
+html+=`<div class="opt" onclick="selectOpt(${i})">${q.opts[i].txt}</div>`;
+}
+document.getElementById("optWrap").innerHTML=html;
+}
+
+function selectOpt(i){
+selectedIndex=i;
+let allOpt=document.querySelectorAll(".opt");
+allOpt.forEach(el=>el.classList.remove("active"));
+allOpt[i].classList.add("active");
+}
+
+function nextQuestion(){
+if(selectedIndex===null){
+alert("请先选择一个答案！");
+return;
+}
+let sel=quizList[currentQ].opts[selectedIndex].val;
+for(let d=0;d<7;d++) score[d]+=sel[d];
+currentQ++;
+if(currentQ>=quizList.length){
+showResult();
+}else{
+renderQuestion();
+}
+}
+
+function showResult(){
+document.getElementById("quizPage").style.display="none";
+document.getElementById("resPage").style.display="block";
+const myChart = echarts.init(document.getElementById('radar'));
+let option={
+backgroundColor:'#121218',
+radar:{
+indicator:dimNames.map(name=>{return {name:name,max:12}}),
+radius:"70%",
+splitArea:{areaStyle:{color:["#2b2027","#3c2831"]}},
+axisName:{color:"#e2c698",fontSize:14}
+},
+series:[{
+name:"你的七宗罪",
+type:'radar',
+data:[{value:score,name:"个人特质",areaStyle:{color:"rgba(145,45,60,0.55)"},lineStyle:{color:"#c75464"},symbol:'circle',symbolSize:7}]
+}]
+};
+myChart.setOption(option);
+window.addEventListener("resize",()=>myChart.resize());
+//生成解读文本
+let maxVal=Math.max(...score);
+let maxIdx=score.indexOf(maxVal);
+let textDict={
+"傲慢":"【傲慢】是你身上最强的一面。你内心拥有较强自尊心，渴望被认可、被重视。注意不要过于高估自我，学会看见别人身上的闪光点。",
+"贪婪":"【贪婪】是你的主导特质。你向往更好的物质生活，有很强的进取心；但记得懂得知足，不要被无尽欲望裹挟。",
+"色欲":"【色欲】是你的主导特质。你感性丰富，容易为感情动心；需要把握好亲密关系的分寸感，避免沉溺情欲。",
+"嫉妒":"【嫉妒】是你的主导特质。你常常不自觉拿自己与他人对比，内心容易失衡；试着接纳自己，每个人的节奏本就不一样。",
+"暴怒":"【暴怒】是你的主导特质。你性格直率，情绪来得很快；遇事尽量先停顿几秒再说话，减少冲动带来的麻烦。",
+"暴食":"【暴食】是你的主导特质。你享受吃喝与感官上的愉悦；需要适度节制，照顾自己的身体健康。",
+"懒惰":"【懒惰】是你的主导特质。你向往安逸松弛的生活；适度休息没问题，但长期的拖延会阻碍自己成长进步。"
+};
+let resHtml="<p>✅各项得分情况：<br/>";
+for(let i=0;i<7;i++){
+resHtml+=dimNames[i]+"："+score[i]+"分<br/>";
+}
+resHtml+="<br/>"+textDict[dimNames[maxIdx]]+"<br/><br/><i>温馨提示：本结果仅供娱乐，非专业心理测评。</i></p>";
+document.getElementById("resultDesc").innerHTML=resHtml;
+}
+
+function restartTest(){
+goQuiz();
+}
+</script>
+</body>
+</html>
